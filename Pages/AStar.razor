@@ -1,0 +1,75 @@
+﻿@*@layout MyLayout*@
+@page "/AStar"
+
+<div class="row">
+    <div class="col-3">
+        <label for="formGroupExampleInput">Enter Rows Numbers : </label>
+        <input @bind="@RowsNumbers" @oninput="@((e) => { RowsNumbers = (int)e.Value; })" @onclick="HideGrid" type="number" class="form-control" id="formGroupExampleInput" placeholder="Enter Rows Numbers" />
+    </div>
+    <div class="col-3">
+        <label for="formGroupExampleInput2">Enter Columns Numbers :</label>
+        <input @bind="@ColumnsNumbers" @oninput="@((e) => { ColumnsNumbers = (int)e.Value; })" @onclick="HideGrid" type="number" class="form-control" id="formGroupExampleInput2" placeholder="Enter Columns Numbers" />
+    </div>
+</div>
+<div class="mb-3">
+    @{
+        if (RowsNumbers > 0 && ColumnsNumbers > 0)
+        {
+            <button class="btn btn-primary mt-4" @onclick="GenerateGrid">@GridButton</button>
+        }
+        else
+        {
+            <button disabled class="btn btn-primary mt-4" @onclick="GenerateGrid">@GridButton</button>
+        }
+    }
+</div>
+
+@if (IsGrid == true)
+{
+    @for (int i = 0; i < RowsNumbers; i++)
+    {
+        <div class="container-fluid">
+
+            <div class="" style="border:1px solid grey; height:23px;">
+                @for (int j = 0; j < ColumnsNumbers; j++)
+                {
+                    <div @onclick="IncrementCount" class="" style="border:1px solid grey; height:23px; min-width:30px; display:table-cell ;margin:0px -3px 0px 0px">
+                        @*|<sub>--</sub><sup>--</sup>|*@
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    <p>Current count: @currentCount</p>
+
+    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+}
+@code {
+
+    private int RowsNumbers = 25;
+    private int ColumnsNumbers = 55;
+
+
+    #region Show/Hide Grid
+    private bool IsGrid = false;
+    private void GenerateGrid()
+    {
+        IsGrid = !IsGrid;
+    }
+    private void HideGrid()
+    {
+        IsGrid = false;
+    }
+    #endregion
+
+    #region Generate Grid Button
+    private string GridButton => IsGrid ? "Hide Grid" : "Generate Grid";
+    #endregion
+
+    private int currentCount = 0;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}
