@@ -1,0 +1,195 @@
+﻿@using Priority_Queue;
+
+
+<button @onclick="e=>AStarAlgorithm(StartNode,EndNode)" class="btn btn-success mt-4 ml-4">Start</button>
+<button @onclick="ResetGrid" class="btn btn-warning mt-4 ml-4">Reset</button>
+
+
+@if (FoundOrNot == true)
+{
+    <p>.a path was found</p>
+}
+else if (FoundOrNot == false)
+{
+    <p>.there was no path found</p>
+}
+
+@code {
+    [CascadingParameter(Name = "RowsNumbers")]
+    public int RowsNumbers { get; set; }
+
+    [CascadingParameter(Name = "ColumnsNumbers")]
+    public int ColumnsNumbers { get; set; }
+
+    [CascadingParameter(Name = "ColoredDiv")]
+    public string[,] ColoredDiv { get; set; }
+
+    [CascadingParameter(Name = "StartNode")]
+    public Vector2 StartNode { get; set; }
+
+    [CascadingParameter(Name = "EndNode")]
+    public Vector2 EndNode { get; set; }
+
+    [CascadingParameter(Name = "ScoredDiv")]
+    public string[,] ScoredDiv { get; set; } = new string[55, 55]; // Future Updates to put scores when Scrolled with mouse
+
+    private bool FoundOrNot;
+
+
+    // A-Star algorithms works as the following : we try to find the best next node by estimating f(n)
+    // which we calculate using the sum of g(n) which is the distance from one node to it's neighbor
+    // and h(n) which is an estimate of the distance between a node and the end-node.
+    //  The Formula: f(n) = g(n) + h(n)
+    private void AStarAlgorithm(Vector2 startPosition, Vector2 goalPosition)
+    {
+        // Open Set
+        SimplePriorityQueue<Vector2, int> OpenSet = new SimplePriorityQueue<Vector2, int>();
+
+        // Closed Set
+        List<Vector2> ClosedSet = new List<Vector2>();
+
+        // This is to Construct the path (explained later)
+        Dictionary<Vector2, Vector2> CameFrom = new Dictionary<Vector2, Vector2>();
+
+        // These two are to hold F(n) and G(n) Values
+        IDictionary<Vector2, int> F_ofN = new Dictionary<Vector2, int>();
+        IDictionary<Vector2, int> G_ofN = new Dictionary<Vector2, int>();
+
+        // for start node both values are zero
+        F_ofN[startPosition] = 0;
+        G_ofN[startPosition] = 0;
+
+        // Adds the start node to the open set
+        OpenSet.Enqueue(startPosition, F_ofN[startPosition]);
+
+        // Algorithm starts here
+        while (OpenSet.Count > 0)
+        {
+            //await Task.Delay(1000);
+            // current node is the node with the smallest f(n)
+            Vector2 CurrentNode = OpenSet.Dequeue();
+
+
+            ClosedSet.Add(CurrentNode);
+
+
+            ColoredDiv[(int)CurrentNode.X, (int)CurrentNode.Y] = "background-color:darkseagreen";
+
+            if (CurrentNode == goalPosition)
+            {
+                FoundOrNot = true;
+                break;
+            }
+
+            var availableNeighbors = Neighbors(CurrentNode);
+
+            foreach (Vector2 node in availableNeighbors)
+            {
+                if (ClosedSet.Contains(node))
+                {
+                    continue;
+                }
+
+                int NodeGScore = G_ofN[CurrentNode] + EuclideanDistance(node, CurrentNode);
+
+
+                if (!OpenSet.Contains(node) || NodeGScore < G_ofN[node])
+                {
+                    G_ofN[node] = NodeGScore;
+                    F_ofN[node] = G_ofN[node] + EuclideanDistance(node, EndNode);
+
+                    // the most promising neighbor is added to the queue
+                    CameFrom[node] = CurrentNode;
+
+                    if (!OpenSet.Contains(node))
+                    {
+                        OpenSet.Enqueue(node, F_ofN[node]);
+                    }
+                    else
+                    {
+                        OpenSet.UpdatePriority(node, F_ofN[node]);
+                    }
+                }
+            }
+        }
+
+
+        if (FoundOrNot == true)
+        {
+            Vector2 node2 = EndNode;
+            for (int i = 0; i < CameFrom.Count; i++)
+            {
+                var value = CameFrom.FirstOrDefault(x => x.Key == node2).Value;
+                if (value.X == startPosition.X && value.Y == startPosition.Y)
+                {
+                    break;
+                }
+                ColoredDiv[(int)value.X, (int)value.Y] = "background-color:yellow";
+
+                System.Threading.Thread.Sleep(100);
+                node2 = value;
+                Console.WriteLine(value);
+            }
+        }
+
+        ColoredDiv[(int)startPosition.X, (int)startPosition.Y] = "background-color:red";
+        ColoredDiv[(int)goalPosition.X, (int)goalPosition.Y] = "background-color:blue";
+
+    }
+
+
+    // This is to calculate g(n) which is the cost of the path from the start node to n
+    // and h(n) which is a heuristic function that estimates the cost of the cheapest path from n to the goal
+    // i will be using the Euclidean Distance formula
+    private int EuclideanDistance(Vector2 node, Vector2 goal)
+    {
+        return (int)(Vector2.Distance(node, goal) * 10);
+    }
+
+
+    // getting available neighbors
+    private List<Vector2> Neighbors(Vector2 node)
+    {
+        int[] directionsX = new int[] { 1, -1, 0 };
+        int[] directionsY = new int[] { 1, -1, 0 };
+        List<Vector2> Neighbors = new List<Vector2>();
+
+        foreach (var x in directionsX)
+        {
+            foreach (var y in directionsY)
+            {
+                var newX = node.X + x;
+                var newY = node.Y + y;
+                if (x == 0 && y == 0) continue;
+                if (newX >= 0 && newY >= 0 && newX < RowsNumbers && newY < ColumnsNumbers && ColoredDiv[(int)newX, (int)newY] != "background-color:green")
+                {
+                    Vector2 NewNode = new Vector2(newX, newY);
+                    Neighbors.Add(NewNode);
+                    ColoredDiv[(int)NewNode.X, (int)NewNode.Y] = "background-color:orange";
+                }
+            }
+        }
+        return Neighbors;
+    }
+
+
+    // Reset Grid
+    private void ResetGrid()
+    {
+        for (int i = 0; i < RowsNumbers; i++)
+        {
+            for (int j = 0; j < ColumnsNumbers; j++)
+            {
+                if (ColoredDiv[i, j] == "background-color:red" || ColoredDiv[i, j] == "background-color:blue")
+                {
+
+                }
+                else
+                {
+                    ColoredDiv[i, j] = null;
+                }
+            }
+        }
+        FoundOrNot = false;
+    }
+}

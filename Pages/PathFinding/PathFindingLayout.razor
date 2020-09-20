@@ -1,0 +1,224 @@
+﻿@*@inherits LayoutComponentBase
+    @layout MainLayout*@
+@page "/PathFinding"
+
+<div class="input-group mb-3 col-4">
+    <div class="input-group-prepend">
+        <label class="input-group-text" for="inputGroupSelect01">Options</label>
+    </div>
+    <select @bind="DifferentAlgos" class="custom-select" id="inputGroupSelect01">
+        <option selected value="">Choose an Algorithm</option>
+        <option value="AStar">A-Star</option>
+        <option value="Dijkstra">Dijkstra</option>
+    </select>
+</div>
+<h4>Useful tips on how to start : <button @onclick="GenerateTips" class="btn btn-outline-secondary ml-5">@TipsButtonValue</button> </h4>
+@if (UnderStood)
+{
+    <div>
+        <ul>
+            <li><p>the grid has maximum width and height of 55 squares and minimum of 1 any more or less the Generate Grid button will be disabled</p></li>
+            <li><p>press and hold the Alt key to make/remove the <span style="color:green">wall</span></p></li>
+            <li><p>press and hold the Ctrl key to make/remove the <span style="color:red">start point</span></p></li>
+            <li><p>press and hold the Shift key to make/remove the <span style="color:blue">end point</span></p></li>
+            <li><p>Normal left-mouse clicks generates more walls if the sqare is empty, if not they will make the square blank</p></li>
+        </ul>
+    </div>
+}
+<div class="row">
+    <div class="col-3">
+        <label for="formGroupExampleInput">Enter Rows Numbers : </label>
+        <input @bind="@RowsNumbers" @onclick="HideGrid" type="number" class="form-control" id="formGroupExampleInput" placeholder="Enter Rows Numbers" max="55" min="1" />
+    </div>
+    <div class="col-3">
+        <label for="formGroupExampleInput2">Enter Columns Numbers :</label>
+        <input @bind="@ColumnsNumbers" @onclick="HideGrid" type="number" class="form-control" id="formGroupExampleInput2" placeholder="Enter Columns Numbers" max="55" min="1" />
+    </div>
+</div>
+<div class="mb-3">
+    @{
+        if (RowsNumbers > 0 && ColumnsNumbers > 0 && RowsNumbers < 56 && ColumnsNumbers < 56)
+        {
+            <div class="row">
+                <button class="btn btn-primary mt-4" @onclick="GenerateGrid">@GridButton</button>
+                @if (IsGrid == true && DifferentAlgos == "AStar" && StartPositionCounter == 1 && EndPositionCounter == 1)
+                {
+                    <CascadingValue Value="@RowsNumbers" Name="RowsNumbers">
+                        <CascadingValue Value="@ColumnsNumbers" Name="ColumnsNumbers">
+                            <CascadingValue Value="@ColoredDiv" Name="ColoredDiv">
+                                <CascadingValue Value="@StartNode" Name="StartNode">
+                                    <CascadingValue Value="@EndNode" Name="EndNode">
+                                        <CascadingValue Value="@ScoredDiv" Name="ScoredDiv">
+                                            <AStar></AStar>
+                                        </CascadingValue>
+                                    </CascadingValue>
+                                </CascadingValue>
+                            </CascadingValue>
+                        </CascadingValue>
+                    </CascadingValue>
+                }
+                @if (IsGrid == true && DifferentAlgos == "Dijkstra" && StartPositionCounter == 1 && EndPositionCounter == 1)
+                {
+                    <CascadingValue Value="@RowsNumbers" Name="RowsNumbers">
+                        <CascadingValue Value="@ColumnsNumbers" Name="ColumnsNumbers">
+                            <CascadingValue Value="@ColoredDiv" Name="ColoredDiv">
+                                <CascadingValue Value="@StartNode" Name="StartNode">
+                                    <CascadingValue Value="@EndNode" Name="EndNode">
+                                        <CascadingValue Value="@ScoredDiv" Name="ScoredDiv">
+                                            <Dijkstra></Dijkstra>
+                                        </CascadingValue>
+                                    </CascadingValue>
+                                </CascadingValue>
+                            </CascadingValue>
+                        </CascadingValue>
+                    </CascadingValue>
+                }
+                @*<button class="btn btn-primary mt-4 mr-4 ml-4">Reset walls</button>*@
+            </div>
+        }
+        else
+        {
+            <button disabled class="btn btn-primary mt-4" @onclick="GenerateGrid">@GridButton</button>
+        }
+    }
+</div>
+@if (IsGrid == true)
+{
+    @for (int i = 0; i < RowsNumbers; i++)
+    {
+        var rows = i;
+        <div class="container-fluid">
+            <div class="" style="border:1px solid grey; height:25px; display:table-cell; ">
+                @for (int j = 0; j < ColumnsNumbers; j++)
+                {
+                    var columns = j;
+                    <div @onmouseover="e => ChangeColorOnMouseOver(e, rows, columns)" @onclick="e => StartAndEndPoints(e, rows, columns)" style="border:1px solid grey; height:25px; width:25px; display:table-cell; @ColoredDiv[rows, columns]">@ScoredDiv[rows, columns]</div>
+                }
+            </div>
+        </div>
+    }
+    <br />
+    <p>Squares Count = @{int SqaresNumbers = RowsNumbers * ColumnsNumbers;}@SqaresNumbers </p>
+}
+
+@*<div>
+        @Body
+    </div>*@
+
+@code {
+    private string DifferentAlgos;
+
+    public int RowsNumbers { get; set; } = 15;
+    public int ColumnsNumbers { get; set; } = 15;
+    string[,] ColoredDiv = new string[55, 55];
+    Vector2 StartNode = new Vector2();
+    Vector2 EndNode = new Vector2();
+    string[,] ScoredDiv = new string[55, 55]; // Future Updates to put scores when Scrolled with mouse
+
+    //private ListDictionary WallPosition = new ListDictionary();
+
+
+    #region Show/Hide Grid
+    private bool IsGrid = false;
+    private void GenerateGrid()
+    {
+        IsGrid = !IsGrid;
+    }
+    private void HideGrid()
+    {
+        IsGrid = false;
+    }
+    #endregion
+
+    #region Generate Grid Button
+    private string GridButton => IsGrid ? "Hide Grid" : "Generate Grid";
+    #endregion
+
+    #region Grid Wall
+    private void ChangeColorOnMouseOver(MouseEventArgs e, int i, int j)
+    {
+        if (e.AltKey)
+        {
+            if (ColoredDiv[i, j] == "background-color:green")
+            {
+                ColoredDiv[i, j] = null;
+            }
+            else
+            {
+                if (ColoredDiv[i, j] == null)
+                {
+                    ColoredDiv[i, j] = "background-color:green";
+                }
+            }
+        }
+    }
+    #endregion
+
+    #region Start and End points, walls with normal left-mouse clicks
+    private int StartPositionCounter = 0;
+    private int EndPositionCounter = 0;
+    private void StartAndEndPoints(MouseEventArgs e, int i, int j)
+    {
+        if (e.CtrlKey && StartPositionCounter == 0)
+        {
+            if (ColoredDiv[i, j] == "background-color:blue")
+            {
+                EndPositionCounter--;
+            }
+            ColoredDiv[i, j] = "background-color:red";
+            StartPositionCounter++;
+            StartNode.X = i;
+            StartNode.Y = j;
+        }
+        else if (e.ShiftKey && EndPositionCounter == 0)
+        {
+            if (ColoredDiv[i, j] == "background-color:red")
+            {
+                StartPositionCounter--;
+            }
+            ColoredDiv[i, j] = "background-color:blue";
+            EndPositionCounter++;
+            EndNode.X = i;
+            EndNode.Y = j;
+        }
+        else if (ColoredDiv[i, j] == null)
+        {
+            ColoredDiv[i, j] = "background-color:green";
+        }
+        else if (ColoredDiv[i, j] == "background-color:red" || ColoredDiv[i, j] == "background-color:green" || ColoredDiv[i, j] == "background-color:blue")
+        {
+            if (ColoredDiv[i, j] == "background-color:red")
+            {
+                StartPositionCounter--;
+            }
+            else if (ColoredDiv[i, j] == "background-color:blue")
+            {
+                EndPositionCounter--;
+            }
+            ColoredDiv[i, j] = null;
+        }
+
+    }
+    #endregion
+
+    #region Show or Hide Tips
+    private bool UnderStood = true;
+    private string TipsButtonValue => UnderStood ? "UnderStood" : "Show tips";
+    private void GenerateTips()
+    {
+        UnderStood = !UnderStood;
+    }
+    #endregion
+
+    #region Making the grid bigger when scrolling *does not work for now but i will try later*
+    private string BiggerGrid;
+    private int GetBigger = 25;
+    private void OnScrollBiggerGrid()
+    {
+        GetBigger += 3;
+        BiggerGrid = $"height:{GetBigger}px; width:{GetBigger}px;";
+    }
+    #endregion
+
+
+}
