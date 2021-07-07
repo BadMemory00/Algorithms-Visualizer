@@ -6,7 +6,9 @@ for now only A* and bubble sort work, but i plan to add much more algorithms in 
 
 
 a* :
+
 ![](photos/A%20star.gif)
 
 Bubble sort :
+
 ![](photos/Bubble%20Sort.gif)
