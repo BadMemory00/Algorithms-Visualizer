@@ -1,0 +1,42 @@
+﻿
+@if (!IsWorking)
+{
+    <button @onclick="async ()=> await BubbleSortAlgo()" class="btn btn-success mt-4 ml-4">Start</button>
+}
+else
+{
+    <button disabled class="btn btn-success mt-4 ml-4">Start</button>
+}
+
+
+
+@code {
+    [CascadingParameter(Name = "ListOfItems")]
+    public List<int> ListOfItems { get; set; }
+
+    [CascadingParameter(Name = "ItemsNumber")]
+    public int ItemsNumber { get; set; }
+
+    private bool IsWorking;
+
+    private async Task BubbleSortAlgo()
+    {
+        IsWorking = true;
+
+        for(int i =0; i < ListOfItems.Count - 1; i++)
+        {
+            await Task.Delay(100);
+            for(int j = 0; j < ListOfItems.Count - 1; j++)
+            {
+                if(ListOfItems[j] > ListOfItems[j + 1])
+                {
+                    int temp = ListOfItems[j];
+                    ListOfItems[j] = ListOfItems[j + 1];
+                    ListOfItems[j + 1] = temp;
+                }
+            }
+        }
+        IsWorking = false;
+    }
+
+}

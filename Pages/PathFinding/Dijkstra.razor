@@ -1,0 +1,101 @@
+﻿@using Priority_Queue;
+
+<button @onclick="e=>DijkstraAlgorithm(StartNode,EndNode)" class="btn btn-success mt-4 ml-4">Start</button>
+<button @onclick="ResetGrid" class="btn btn-warning mt-4 ml-4">Reset</button>
+
+@if (FoundOrNot == true)
+{
+    <p>.a path was found</p>
+}
+else if (FoundOrNot == false)
+{
+    <p>.there was no path found</p>
+}
+
+@code {
+    [CascadingParameter(Name = "RowsNumbers")]
+    public int RowsNumbers { get; set; }
+
+    [CascadingParameter(Name = "ColumnsNumbers")]
+    public int ColumnsNumbers { get; set; }
+
+    [CascadingParameter(Name = "ColoredDiv")]
+    public string[,] ColoredDiv { get; set; }
+
+    [CascadingParameter(Name = "StartNode")]
+    public Vector2 StartNode { get; set; }
+
+    [CascadingParameter(Name = "EndNode")]
+    public Vector2 EndNode { get; set; }
+
+    [CascadingParameter(Name = "ScoredDiv")]
+    public string[,] ScoredDiv { get; set; } = new string[55, 55]; // Future Updates to put scores when Scrolled with mouse
+
+    private bool FoundOrNot;
+
+
+
+    private void DijkstraAlgorithm(Vector2 startPosition, Vector2 goalPosition)
+    {
+        SimplePriorityQueue<Vector2, int> OpenSet = new SimplePriorityQueue<Vector2, int>();
+
+        List<Vector2> ClosedSet = new List<Vector2>();
+
+        Dictionary<Vector2, Vector2> CameFrom = new Dictionary<Vector2, Vector2>();
+
+
+        //
+        IDictionary<Vector2, int> F_ofN = new Dictionary<Vector2, int>();
+        IDictionary<Vector2, int> G_ofN = new Dictionary<Vector2, int>();
+    }
+
+    private int EuclideanDistance(Vector2 node, Vector2 goal)
+    {
+        return (int)(Vector2.Distance(node, goal) * 10);
+    }
+
+    // getting available neighbors
+    private List<Vector2> Neighbors(Vector2 node)
+    {
+        int[] directionsX = new int[] { 1, -1, 0 };
+        int[] directionsY = new int[] { 1, -1, 0 };
+        List<Vector2> Neighbors = new List<Vector2>();
+
+        foreach (var x in directionsX)
+        {
+            foreach (var y in directionsY)
+            {
+                var newX = node.X + x;
+                var newY = node.Y + y;
+                if (x == 0 && y == 0) continue;
+                if (newX >= 0 && newY >= 0 && newX < RowsNumbers && newY < ColumnsNumbers && ColoredDiv[(int)newX, (int)newY] != "background-color:green")
+                {
+                    Vector2 NewNode = new Vector2(newX, newY);
+                    Neighbors.Add(NewNode);
+                    ColoredDiv[(int)NewNode.X, (int)NewNode.Y] = "background-color:orange";
+                }
+            }
+        }
+        return Neighbors;
+    }
+
+    // Reset Grid
+    private void ResetGrid()
+    {
+        for (int i = 0; i < RowsNumbers; i++)
+        {
+            for (int j = 0; j < ColumnsNumbers; j++)
+            {
+                if (ColoredDiv[i, j] == "background-color:red" || ColoredDiv[i, j] == "background-color:blue")
+                {
+
+                }
+                else
+                {
+                    ColoredDiv[i, j] = null;
+                }
+            }
+        }
+        FoundOrNot = false;
+    }
+}

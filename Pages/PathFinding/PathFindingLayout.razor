@@ -1,6 +1,5 @@
-﻿@*@inherits LayoutComponentBase
-    @layout MainLayout*@
-@page "/PathFinding"
+﻿@page "/PathFinding"
+@using Priority_Queue;
 
 <div class="input-group mb-3 col-4">
     <div class="input-group-prepend">
@@ -28,11 +27,11 @@
 <div class="row">
     <div class="col-3">
         <label for="formGroupExampleInput">Enter Rows Numbers : </label>
-        <input @bind="@RowsNumbers" @onclick="HideGrid" type="number" class="form-control" id="formGroupExampleInput" placeholder="Enter Rows Numbers" max="55" min="1" />
+        <input @bind="@RowsNumbers" @onclick="HideGrid" @onmousedown="HideGrid" type="number" class="form-control" id="formGroupExampleInput" placeholder="Enter Rows Numbers" max="55" min="1" />
     </div>
     <div class="col-3">
         <label for="formGroupExampleInput2">Enter Columns Numbers :</label>
-        <input @bind="@ColumnsNumbers" @onclick="HideGrid" type="number" class="form-control" id="formGroupExampleInput2" placeholder="Enter Columns Numbers" max="55" min="1" />
+        <input @bind="@ColumnsNumbers" @onclick="HideGrid" @onmousedown="HideGrid" type="number" class="form-control" id="formGroupExampleInput2" placeholder="Enter Columns Numbers" max="55" min="1" />
     </div>
 </div>
 <div class="mb-3">
@@ -40,22 +39,30 @@
         if (RowsNumbers > 0 && ColumnsNumbers > 0 && RowsNumbers < 56 && ColumnsNumbers < 56)
         {
             <div class="row">
-                <button class="btn btn-primary mt-4" @onclick="GenerateGrid">@GridButton</button>
+                <button class="btn btn-primary mt-4 ml-3" @onclick="GenerateGrid">@GridButton</button>
                 @if (IsGrid == true && DifferentAlgos == "AStar" && StartPositionCounter == 1 && EndPositionCounter == 1)
                 {
-                    <CascadingValue Value="@RowsNumbers" Name="RowsNumbers">
-                        <CascadingValue Value="@ColumnsNumbers" Name="ColumnsNumbers">
-                            <CascadingValue Value="@ColoredDiv" Name="ColoredDiv">
-                                <CascadingValue Value="@StartNode" Name="StartNode">
-                                    <CascadingValue Value="@EndNode" Name="EndNode">
-                                        <CascadingValue Value="@ScoredDiv" Name="ScoredDiv">
-                                            <AStar></AStar>
-                                        </CascadingValue>
-                                    </CascadingValue>
-                                </CascadingValue>
-                            </CascadingValue>
-                        </CascadingValue>
-                    </CascadingValue>
+                    @if (IsWorking)
+                    {
+                        <button disabled class="btn btn-success mt-4 ml-4">Start</button>
+                        <button disabled class="btn btn-warning mt-4 ml-4">Reset</button>
+                    }
+                    else
+                    {
+                        <button @onclick="async ()=> await AStarAlgorithm()" class="btn btn-success mt-4 ml-4">Start</button>
+                        <button @onclick="ResetGrid" class="btn btn-warning mt-4 ml-4">Reset</button>
+                    }
+
+
+
+                    @if (FoundOrNot == true)
+                    {
+                        <p>.a path was found</p>
+                    }
+                    else if (FoundOrNot == false)
+                    {
+                        <p>.there was no path found</p>
+                    }
                 }
                 @if (IsGrid == true && DifferentAlgos == "Dijkstra" && StartPositionCounter == 1 && EndPositionCounter == 1)
                 {
@@ -87,23 +94,17 @@
     @for (int i = 0; i < RowsNumbers; i++)
     {
         var rows = i;
-        <div class="container-fluid">
-            <div class="" style="border:1px solid grey; height:25px; display:table-cell; ">
-                @for (int j = 0; j < ColumnsNumbers; j++)
-                {
-                    var columns = j;
-                    <div @onmouseover="e => ChangeColorOnMouseOver(e, rows, columns)" @onclick="e => StartAndEndPoints(e, rows, columns)" style="border:1px solid grey; height:25px; width:25px; display:table-cell; @ColoredDiv[rows, columns]">@ScoredDiv[rows, columns]</div>
-                }
-            </div>
+        <div>
+            @for (int j = 0; j < ColumnsNumbers; j++)
+            {
+                var columns = j;
+                <div @onmouseover="e => ChangeColorOnMouseOver(e, rows, columns)" @onclick="e => StartAndEndPoints(e, rows, columns)" style="border:1px solid grey; height:25px; width:25px; min-width:25px; display:table-cell; @ColoredDiv[rows, columns]">@*@ScoredDiv[rows, columns]*@</div>
+            }
         </div>
     }
     <br />
     <p>Squares Count = @{int SqaresNumbers = RowsNumbers * ColumnsNumbers;}@SqaresNumbers </p>
 }
-
-@*<div>
-        @Body
-    </div>*@
 
 @code {
     private string DifferentAlgos;
@@ -114,8 +115,6 @@
     Vector2 StartNode = new Vector2();
     Vector2 EndNode = new Vector2();
     string[,] ScoredDiv = new string[55, 55]; // Future Updates to put scores when Scrolled with mouse
-
-    //private ListDictionary WallPosition = new ListDictionary();
 
 
     #region Show/Hide Grid
@@ -221,4 +220,194 @@
     #endregion
 
 
+    private bool FoundOrNot;
+
+    private bool IsWorking;
+
+
+    // A-Star algorithms works as following : we try to find the best next node by estimating f(n)
+    // which we calculate using the sum of g(n) which is the distance from one node to it's neighbor + the distance between the neighbor to the start node
+    // and h(n) which is an estimate of the distance between a node and the end-node.
+    //  The Formula: f(n) = g(n) + h(n)
+    private async Task AStarAlgorithm()
+    {
+        IsWorking = true;
+
+        // I did this because i wasn't sure if start and end nodes values were to change while the algorithm is working.
+        Vector2 startPosition = StartNode;
+        Vector2 goalPosition = EndNode;
+
+        // Open Set
+        SimplePriorityQueue<Vector2, int> OpenSet = new SimplePriorityQueue<Vector2, int>();
+
+        // Closed Set
+        List<Vector2> ClosedSet = new List<Vector2>();
+
+        // This is to Construct the path (explained later)
+        Dictionary<Vector2, Vector2> CameFrom = new Dictionary<Vector2, Vector2>();
+
+        // These two are to hold F(n) and G(n) Values
+        IDictionary<Vector2, int> F_ofN = new Dictionary<Vector2, int>();
+        IDictionary<Vector2, int> G_ofN = new Dictionary<Vector2, int>();
+
+        // for start node both values are zero
+        F_ofN[startPosition] = 0;
+        G_ofN[startPosition] = 0;
+
+        // Adds the start node to the open set
+        OpenSet.Enqueue(startPosition, F_ofN[startPosition]);
+
+        // Algorithm starts here
+        while (OpenSet.Count > 0)
+        {
+            await Task.Delay(5);
+            // current node is the node with the smallest f(n)
+            Vector2 CurrentNode = OpenSet.Dequeue();
+
+            // adds the current node to the closed set
+            ClosedSet.Add(CurrentNode);
+
+            // if current node is the goal then stop
+            if (CurrentNode == goalPosition)
+            {
+                FoundOrNot = true;
+                break;
+            }
+
+            // colors current node with a distinct color
+            ColoredDiv[(int)CurrentNode.X, (int)CurrentNode.Y] = "background-color:darkseagreen";
+
+            // a list to hold current node's neighbors
+            List<Vector2> availableNeighbors = Neighbors(CurrentNode);
+
+
+            foreach (Vector2 node in availableNeighbors)
+            {
+                // if neighbor is in closed set then it was already evaluated; continue to the next neighbor
+                if (ClosedSet.Contains(node))
+                {
+                    continue;
+                }
+
+                // color the neighbors with an orange color
+                ColoredDiv[(int)node.X, (int)node.Y] = "background-color:orange";
+
+                // G(neighbor) = G(current node) + distance between the neighbor and the current node
+                int NodeGScore = G_ofN[CurrentNode] + EuclideanDistance(node, CurrentNode);
+
+                // if the neighbor is not in the open list,
+                // or the new g(n) is less than the old one (it means that we found a better route for the same node)
+                if (!OpenSet.Contains(node) || NodeGScore < G_ofN[node])
+                {
+                    // add F(n) and G(n) values
+                    G_ofN[node] = NodeGScore;
+                    F_ofN[node] = G_ofN[node] + EuclideanDistance(node, EndNode);
+
+                    // the neighbor is added to the Dictionary (for path finding) (explained later)
+                    CameFrom[node] = CurrentNode;
+
+                    if (!OpenSet.Contains(node))
+                    {
+                        // adds neighbor to the open set
+                        OpenSet.Enqueue(node, F_ofN[node]);
+                    }
+                    else
+                    {
+                        // Updates priority (not sure if i have to do this but just to be safe)
+                        OpenSet.UpdatePriority(node, F_ofN[node]);
+                    }
+                }
+                StateHasChanged();
+            }
+        }
+
+        // this is for reconstructing the path
+        // it works like this :
+        // all the neighbors of a current node are added to the CameFrom Dictionary as a key and the current node as value
+        // it starts from the end node as a key and finds it's value (the value will be the node that got to the end node)
+        // and then uses that value and put it as a key to find the node that was resposible for getting this node
+        // and repeat untill start position is reached
+        if (FoundOrNot == true)
+        {
+            Vector2 node2 = EndNode;
+            for (int i = 0; i < CameFrom.Count; i++)
+            {
+                Vector2 value = CameFrom[node2];
+                //var value = CameFrom.FirstOrDefault(x => x.Key == node2).Value;
+
+                // if we reached the start position end the loop
+                if (value.X == startPosition.X && value.Y == startPosition.Y)
+                {
+                    break;
+                }
+                ColoredDiv[(int)value.X, (int)value.Y] = "background-color:yellow";
+
+                node2 = value;
+            }
+        }
+
+
+        // recolor the start and end nodes because thier colors might change while the algorithm is working
+        ColoredDiv[(int)startPosition.X, (int)startPosition.Y] = "background-color:red";
+        ColoredDiv[(int)goalPosition.X, (int)goalPosition.Y] = "background-color:blue";
+
+
+        IsWorking = false;
+    }
+
+
+    // This is to calculate g(n) which is the cost of the path from the start node to n
+    // and h(n) which is a heuristic function that estimates the cost of the cheapest path from n to the goal
+    // i will be using the Euclidean Distance formula
+    private int EuclideanDistance(Vector2 node, Vector2 goal)
+    {
+        return (int)(Vector2.Distance(node, goal) * 10);
+    }
+
+
+    // getting available neighbors
+    private List<Vector2> Neighbors(Vector2 node)
+    {
+        int[] directions = new int[] { 1, -1, 0 };
+        List<Vector2> Neighbors = new List<Vector2>();
+
+        foreach (var x in directions)
+        {
+            foreach (var y in directions)
+            {
+                var newX = node.X + x;
+                var newY = node.Y + y;
+                if (x == 0 && y == 0) continue;
+                if (newX >= 0 && newY >= 0 && newX < RowsNumbers && newY < ColumnsNumbers && ColoredDiv[(int)newX, (int)newY] != "background-color:green")
+                {
+                    Vector2 NewNode = new Vector2(newX, newY);
+                    Neighbors.Add(NewNode);
+                }
+            }
+        }
+        //return Neighbors;
+        return Neighbors;
+
+    }
+
+
+    // Reset Grid
+    private void ResetGrid()
+    {
+        for (int i = 0; i < RowsNumbers; i++)
+        {
+            for (int j = 0; j < ColumnsNumbers; j++)
+            {
+                if (ColoredDiv[i, j] == "background-color:red" || ColoredDiv[i, j] == "background-color:blue")
+                {
+
+                }
+                else
+                {
+                    ColoredDiv[i, j] = null;
+                }
+            }
+        }
+        FoundOrNot = false;
+    }
 }

@@ -1,0 +1,109 @@
+﻿@page "/Sorting"
+
+<div>
+    <div class="input-group mb-3 col-4">
+        <div class="input-group-prepend">
+            <label class="input-group-text" for="inputGroupSelect01">Options</label>
+        </div>
+        <select @bind="DifferentAlgos" class="custom-select" id="inputGroupSelect01">
+            <option selected value="">Choose an Algorithm</option>
+            <option value="Bubble">Bubble sort</option>
+            <option value="Insertion">Insertion sort</option>
+        </select>
+    </div>
+
+    <div class="col-3">
+        <label for="formGroupExampleInput">Enter Items Number : (maximum 150)</label>
+        <input @bind="ItemsNumber" @onclick="HideItems" @onmousedown="HideItems" type="number" class="form-control" id="formGroupExampleInput" placeholder="Enter Items Number" min="1" max="150" />
+    </div>
+
+    @if (ItemsNumber <= 150)
+    {
+        <div class="row">
+            <button class="btn btn-primary mt-3 ml-4" @onclick="ItemHeight">@ShowButton</button>
+            @if (ShowOrNot && DifferentAlgos == "Bubble")
+            {
+                @if (!IsWorking)
+                {
+                    <button @onclick="async ()=> await BubbleSortAlgo()" class="btn btn-success mt-4 ml-4">Start</button>
+                }
+                else
+                {
+                    <button disabled class="btn btn-success mt-4 ml-4">Start</button>
+                }
+            }
+        </div>
+    }
+    else
+    {
+        <button disabled class="btn btn-primary mt-3 ml-3">maximum is 150</button>
+    }
+
+    @if (ShowOrNot)
+    {
+        <div class="ml-3 mt-3" style="transform: scaleY(-1);">
+            @for (int i = 0; i < ItemsNumber; i++)
+            {
+                var x = i;
+                <div class="" style="border:1px solid grey; height:@ListOfItems[x]px; width:3px; min-width:3px; display:inline-table;"></div>
+            }
+        </div>
+    }
+</div>
+
+
+
+
+@code {
+    private string DifferentAlgos;
+    public int ItemsNumber { get; set; } = 50;
+    private List<int> ListOfItems = new List<int>();
+
+    //
+    bool ShowOrNot = false;
+    private void HideItems()
+    {
+        ShowOrNot = false;
+    }
+    private string ShowButton => ShowOrNot ? "Hide Items" : "Show Items";
+
+    private void ItemHeight()
+    {
+        ShowOrNot = !ShowOrNot;
+
+        // Only change how to grid looks if the number of columns change.
+        if (ListOfItems.Count != ItemsNumber)
+        {
+            ListOfItems.Clear();
+            Random rand = new Random();
+            for (int i = 0; i < ItemsNumber; i++)
+            {
+                ListOfItems.Add(rand.Next(10, 400));
+            }
+        }
+    }
+
+
+    private bool IsWorking;
+
+    private async Task BubbleSortAlgo()
+    {
+        IsWorking = true;
+
+        for (int i = 0; i < ListOfItems.Count - 1; i++)
+        {
+            await Task.Delay(10);
+            for (int j = 0; j < ListOfItems.Count - 1; j++)
+            {
+                if (ListOfItems[j] > ListOfItems[j + 1])
+                {
+                    int temp = ListOfItems[j];
+                    ListOfItems[j] = ListOfItems[j + 1];
+                    ListOfItems[j + 1] = temp;
+                }
+                StateHasChanged();
+            }
+        }
+        IsWorking = false;
+    }
+}
