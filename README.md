@@ -1,4 +1,4 @@
-# I try to visualize as many algorithms as i can using Blazor WA
+# I try to visualize as many algorithms as i can using Blazor WASM
 
 very fun  to look at
 
